@@ -1,21 +1,21 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { ConnectButton } from '@rainbow-me/rainbowkit';
-import { useAccount } from 'wagmi';
+import { usePrivy, useLogin } from '@privy-io/react-auth';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 
 export default function OnboardPage() {
-  const { isConnected } = useAccount();
+  const { ready, authenticated } = usePrivy();
+  const { login } = useLogin();
   const router = useRouter();
 
-  // Redirect to home if already connected
+  // Redirect to home if already authenticated
   useEffect(() => {
-    if (isConnected) {
+    if (ready && authenticated) {
       router.push('/');
     }
-  }, [isConnected, router]);
+  }, [ready, authenticated, router]);
 
   return (
     <motion.div
@@ -97,22 +97,14 @@ export default function OnboardPage() {
 
         {/* Connect Button */}
         <div className="space-y-4">
-          <ConnectButton.Custom>
-            {({ account, chain, openConnectModal, openAccountModal, openChainModal, authenticationStatus, mounted }) => {
-              const ready = mounted && authenticationStatus !== 'loading';
-              const connected = ready && account && chain && (!authenticationStatus || authenticationStatus === 'authenticated');
-
-              return (
-                <motion.button
-                  whileTap={{ scale: 0.95 }}
-                  onClick={openConnectModal}
-                  className="w-full btn-primary text-lg h-14 shadow-lg shadow-emerald-500/25"
-                >
-                  Get Started
-                </motion.button>
-              );
-            }}
-          </ConnectButton.Custom>
+          <motion.button
+            whileTap={{ scale: 0.95 }}
+            onClick={login}
+            disabled={!ready}
+            className="w-full btn-primary text-lg h-14 shadow-lg shadow-emerald-500/25 disabled:opacity-50"
+          >
+            Get Started
+          </motion.button>
           
           <p className="text-xs text-zinc-500">
             By connecting, you agree to our{' '}

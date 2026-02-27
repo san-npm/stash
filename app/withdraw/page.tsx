@@ -5,49 +5,10 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { motion } from 'framer-motion';
 import Link from 'next/link';
 import { useAccount } from 'wagmi';
+import { useRedeem, useUserBalance } from '@yo-protocol/react';
 
 import { getAccountById, getAllAccounts, type AccountId } from '@/lib/accounts';
 import { WithdrawForm } from '@/components/WithdrawForm';
-
-// Mock YO SDK hooks
-const useRedeem = ({ vault }: { vault: string }) => {
-  return {
-    redeem: async (amount: number) => {
-      // Simulate withdraw process with YO SDK
-      console.log(`Withdrawing ${amount} from ${vault}`);
-      
-      // Simulate loading time
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      // In real app, this would:
-      // 1. Calculate shares to redeem
-      // 2. Call redeem function on vault
-      // 3. Wait for confirmation
-      // 4. Transfer tokens to user wallet
-      
-      return {
-        hash: '0x1234567890abcdef',
-        receipt: { status: 1 }
-      };
-    },
-    isLoading: false,
-  };
-};
-
-const useUserBalance = (vaultName: string, address?: string) => {
-  const mockBalances: Record<string, number> = {
-    yoUSD: 2450.75,
-    yoEUR: 1200.50,
-    yoBTC: 0.05128943,
-    yoETH: 1.25934721,
-    yoGOLD: 2.5687,
-  };
-  
-  return {
-    data: address ? (mockBalances[vaultName] || 0) : 0,
-    isLoading: false,
-  };
-};
 
 export default function WithdrawPage() {
   const router = useRouter();
@@ -62,20 +23,19 @@ export default function WithdrawPage() {
   const selectedAccount = getAccountById(selectedAccountId);
   const allAccounts = getAllAccounts();
   
-  const { redeem } = useRedeem({ vault: selectedAccount.yoVault });
-  const { data: availableBalance, isLoading: balanceLoading } = useUserBalance(
-    selectedAccount.yoVault, 
+  const { redeem, isLoading: redeemLoading } = useRedeem({ vault: selectedAccount.vaultAddress as `0x${string}` });
+  const { position, isLoading: balanceLoading } = useUserBalance(
+    selectedAccount.vaultAddress as `0x${string}`, 
     address
   );
+  const availableBalance = Number(position?.assets || BigInt(0));
 
   const handleWithdraw = async (amount: number) => {
     try {
-      // In real app with YO SDK:
-      // 1. Calculate shares needed for amount
-      // 2. Execute redeem function
-      // 3. Tokens automatically sent to user wallet
-      
-      await redeem(amount);
+      // Real YO SDK flow:
+      // 1. Redeem vault shares for the underlying token amount
+      // 2. Tokens are automatically sent to user wallet
+      await redeem(BigInt(amount));
       
       // Success is handled by the WithdrawForm component
     } catch (error) {
@@ -124,7 +84,8 @@ export default function WithdrawPage() {
           
           <div className="space-y-2">
             {allAccounts.map((account) => {
-              const { data: balance } = useUserBalance(account.yoVault, address);
+              const { position } = useUserBalance(account.vaultAddress as `0x${string}`, address);
+              const balance = Number(position?.assets || BigInt(0));
               
               return (
                 <motion.button
@@ -146,7 +107,7 @@ export default function WithdrawPage() {
                       <span className="font-medium">{account.displayName}</span>
                     </div>
                     <div className="text-sm tabular-nums">
-                      {account.currencySymbol}{balance?.toFixed(2) || '0.00'}
+                      {account.currencySymbol}{balance.toFixed(2)}
                     </div>
                   </div>
                 </motion.button>

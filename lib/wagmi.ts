@@ -1,11 +1,12 @@
-import { getDefaultConfig } from '@rainbow-me/rainbowkit';
+import { createConfig } from '@privy-io/wagmi';
 import { base } from 'wagmi/chains';
+import { http } from 'viem';
 
-export const config = getDefaultConfig({
-  appName: 'Stash - Your Savings, Earning More',
-  projectId: process.env.NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID || 'stash-yo-savings',
+export const config = createConfig({
   chains: [base],
-  ssr: true,
+  transports: {
+    [base.id]: http(),
+  },
 });
 
 export const baseChain = base;

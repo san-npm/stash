@@ -5,45 +5,10 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { motion } from 'framer-motion';
 import Link from 'next/link';
 import { useAccount } from 'wagmi';
+import { useDeposit, useApprove } from '@yo-protocol/react';
 
 import { getAccountById, getAllAccounts, type AccountId } from '@/lib/accounts';
 import { DepositForm } from '@/components/DepositForm';
-
-// Mock YO SDK hooks
-const useDeposit = ({ vault }: { vault: string }) => {
-  return {
-    deposit: async (amount: number) => {
-      // Simulate deposit process with YO SDK
-      console.log(`Depositing ${amount} to ${vault}`);
-      
-      // Simulate loading time
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      // In real app, this would:
-      // 1. Check allowance
-      // 2. Approve if needed
-      // 3. Call deposit function on vault
-      // 4. Wait for confirmation
-      
-      return {
-        hash: '0x1234567890abcdef',
-        receipt: { status: 1 }
-      };
-    },
-    isLoading: false,
-  };
-};
-
-const useApprove = ({ token }: { token: string }) => {
-  return {
-    approve: async (spender: string, amount: number) => {
-      console.log(`Approving ${amount} of ${token} for ${spender}`);
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      return { hash: '0xabcdef1234567890' };
-    },
-    isLoading: false,
-  };
-};
 
 export default function DepositPage() {
   const router = useRouter();
@@ -58,18 +23,17 @@ export default function DepositPage() {
   const selectedAccount = getAccountById(selectedAccountId);
   const allAccounts = getAllAccounts();
   
-  const { deposit } = useDeposit({ vault: selectedAccount.yoVault });
-  const { approve } = useApprove({ token: selectedAccount.underlyingToken });
+  const { deposit, isLoading: depositLoading } = useDeposit({ vault: selectedAccount.vaultAddress as `0x${string}` });
+  const { approve, isLoading: approveLoading } = useApprove({ token: selectedAccount.tokenAddress as `0x${string}` });
 
   const handleDeposit = async (amount: number) => {
     try {
-      // In real app with YO SDK:
-      // 1. Check if approval is needed
-      // 2. Approve tokens if needed
-      // 3. Execute deposit
+      // Real YO SDK flow:
+      // 1. Approve tokens for the vault if needed
+      await approve(BigInt(amount));
       
-      await approve(selectedAccount.vaultAddress, amount);
-      await deposit(amount);
+      // 2. Execute deposit - deposits the underlying token amount
+      await deposit(BigInt(amount));
       
       // Success is handled by the DepositForm component
     } catch (error) {

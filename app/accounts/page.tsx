@@ -2,52 +2,37 @@
 
 import { motion } from 'framer-motion';
 import { useAccount } from 'wagmi';
+import { useVaults, useUserBalance } from '@yo-protocol/react';
 import { AccountRow } from '@/components/AccountRow';
 import { getAllAccounts } from '@/lib/accounts';
 
-// Mock hooks - same as home page
-const useVaults = () => {
-  return {
-    data: [
-      { name: 'yoUSD', apy: 8.5 },
-      { name: 'yoEUR', apy: 7.2 },
-      { name: 'yoBTC', apy: 5.8 },
-      { name: 'yoETH', apy: 6.5 },
-      { name: 'yoGOLD', apy: 4.2 },
-    ],
-    isLoading: false,
+// Helper function to get APY (placeholder until YO SDK provides this)
+const getVaultAPY = (symbol?: string) => {
+  const apyMap: Record<string, number> = {
+    yoUSD: 8.5,
+    yoEUR: 7.2,
+    yoBTC: 5.8,
+    yoETH: 6.5,
+    yoGOLD: 4.2,
   };
-};
-
-const useUserBalance = (vaultName: string, address?: string) => {
-  const mockBalances: Record<string, number> = {
-    yoUSD: 2450.75,
-    yoEUR: 1200.50,
-    yoBTC: 0.05,
-    yoETH: 1.25,
-    yoGOLD: 2.5,
-  };
-  
-  return {
-    data: address ? (mockBalances[vaultName] || 0) : 0,
-    isLoading: false,
-  };
+  return symbol ? apyMap[symbol] : 0;
 };
 
 export default function AccountsPage() {
   const { address, isConnected } = useAccount();
-  const { data: vaults, isLoading: vaultsLoading } = useVaults();
+  const { vaults, isLoading: vaultsLoading } = useVaults();
   
   // Get all accounts with their data
   const accounts = getAllAccounts();
   const accountsWithData = accounts.map(account => {
-    const vault = vaults?.find(v => v.name === account.yoVault);
-    const { data: balance, isLoading: balanceLoading } = useUserBalance(account.yoVault, address);
+    // Map vault data from real YO SDK response
+    const vault = vaults?.find(v => v.address.toLowerCase() === account.vaultAddress.toLowerCase());
+    const { position, isLoading: balanceLoading } = useUserBalance(account.vaultAddress as `0x${string}`, address);
     
     return {
       ...account,
-      balance: balance || 0,
-      annualRate: vault?.apy || 0,
+      balance: Number(position?.assets || BigInt(0)),
+      annualRate: getVaultAPY(vault?.symbol),
       isLoading: vaultsLoading || balanceLoading,
     };
   });

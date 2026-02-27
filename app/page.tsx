@@ -3,60 +3,45 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import Link from 'next/link';
-import { useAccount, useDisconnect } from 'wagmi';
-import { ConnectButton } from '@rainbow-me/rainbowkit';
+import { useAccount } from 'wagmi';
+import { usePrivy, useLogin } from '@privy-io/react-auth';
+import { useVaults, useUserBalance } from '@yo-protocol/react';
 
 import { BalanceCard } from '@/components/BalanceCard';
 import { AccountRow } from '@/components/AccountRow';
 import { getAllAccounts } from '@/lib/accounts';
 
-// Mock hooks - in real app these would come from @yo-protocol/react
-const useVaults = () => {
-  return {
-    data: [
-      { name: 'yoUSD', apy: 8.5 },
-      { name: 'yoEUR', apy: 7.2 },
-      { name: 'yoBTC', apy: 5.8 },
-      { name: 'yoETH', apy: 6.5 },
-      { name: 'yoGOLD', apy: 4.2 },
-    ],
-    isLoading: false,
+// Helper function to get APY (placeholder until YO SDK provides this)
+const getVaultAPY = (symbol?: string) => {
+  const apyMap: Record<string, number> = {
+    yoUSD: 8.5,
+    yoEUR: 7.2,
+    yoBTC: 5.8,
+    yoETH: 6.5,
+    yoGOLD: 4.2,
   };
-};
-
-const useUserBalance = (vaultName: string, address?: string) => {
-  // Mock balances
-  const mockBalances: Record<string, number> = {
-    yoUSD: 2450.75,
-    yoEUR: 1200.50,
-    yoBTC: 0.05,
-    yoETH: 1.25,
-    yoGOLD: 2.5,
-  };
-  
-  return {
-    data: address ? (mockBalances[vaultName] || 0) : 0,
-    isLoading: false,
-  };
+  return symbol ? apyMap[symbol] : 0;
 };
 
 export default function HomePage() {
-  const { address, isConnected } = useAccount();
-  const { disconnect } = useDisconnect();
+  const { address } = useAccount();
+  const { ready, authenticated, user, logout } = usePrivy();
+  const { login } = useLogin();
   const [userName, setUserName] = useState('');
   
-  const { data: vaults, isLoading: vaultsLoading } = useVaults();
+  const { vaults, isLoading: vaultsLoading } = useVaults();
   
   // Get all accounts with their data
   const accounts = getAllAccounts();
   const accountsWithData = accounts.map(account => {
-    const vault = vaults?.find(v => v.name === account.yoVault);
-    const { data: balance, isLoading: balanceLoading } = useUserBalance(account.yoVault, address);
+    // Map vault data from real YO SDK response
+    const vault = vaults?.find(v => v.address.toLowerCase() === account.vaultAddress.toLowerCase());
+    const { position, isLoading: balanceLoading } = useUserBalance(account.vaultAddress as `0x${string}`, address);
     
     return {
       ...account,
-      balance: balance || 0,
-      annualRate: vault?.apy || 0,
+      balance: Number(position?.assets || BigInt(0)),
+      annualRate: getVaultAPY(vault?.symbol),
       isLoading: vaultsLoading || balanceLoading,
     };
   });
@@ -75,14 +60,16 @@ export default function HomePage() {
   const monthlyEarnings = totalBalance * 0.02;
 
   useEffect(() => {
-    // Extract name from address for demo
-    if (address) {
+    // Use email from Privy user or fallback to address
+    if (user?.email) {
+      setUserName(user.email.address.split('@')[0]);
+    } else if (address) {
       setUserName(address.slice(2, 6));
     }
-  }, [address]);
+  }, [user, address]);
 
-  // Onboarding flow for non-connected users
-  if (!isConnected) {
+  // Onboarding flow for non-authenticated users
+  if (!ready || !authenticated) {
     return (
       <motion.div
         initial={{ opacity: 0, y: 20 }}
@@ -124,22 +111,14 @@ export default function HomePage() {
 
           {/* Connect Button */}
           <div className="space-y-4">
-            <ConnectButton.Custom>
-              {({ account, chain, openConnectModal, openAccountModal, openChainModal, authenticationStatus, mounted }) => {
-                const ready = mounted && authenticationStatus !== 'loading';
-                const connected = ready && account && chain && (!authenticationStatus || authenticationStatus === 'authenticated');
-
-                return (
-                  <motion.button
-                    whileTap={{ scale: 0.95 }}
-                    onClick={openConnectModal}
-                    className="w-full btn-primary text-lg h-14"
-                  >
-                    Get Started
-                  </motion.button>
-                );
-              }}
-            </ConnectButton.Custom>
+            <motion.button
+              whileTap={{ scale: 0.95 }}
+              onClick={login}
+              disabled={!ready}
+              className="w-full btn-primary text-lg h-14 disabled:opacity-50"
+            >
+              Get Started
+            </motion.button>
             
             <p className="text-xs text-zinc-500">
               Simple and secure • Protected by institutional-grade security
@@ -161,7 +140,12 @@ export default function HomePage() {
         <div>
           {/* Empty for balance card greeting */}
         </div>
-        <ConnectButton />
+        <button
+          onClick={logout}
+          className="px-4 py-2 bg-zinc-800 hover:bg-zinc-700 rounded-xl text-sm text-zinc-300 transition-colors"
+        >
+          {user?.email?.address || 'Sign out'}
+        </button>
       </div>
 
       {/* Total Balance Card */}
@@ -224,6 +208,22 @@ export default function HomePage() {
           </motion.div>
         </Link>
       </div>
+
+      {/* Floating Deposit Button */}
+      <Link href="/deposit">
+        <motion.div
+          className="fixed bottom-24 right-4 z-10"
+          initial={{ scale: 0 }}
+          animate={{ scale: 1 }}
+          transition={{ type: 'spring', stiffness: 400, damping: 17, delay: 0.3 }}
+          whileHover={{ scale: 1.1 }}
+          whileTap={{ scale: 0.95 }}
+        >
+          <div className="w-14 h-14 bg-emerald-500 hover:bg-emerald-600 rounded-full shadow-lg flex items-center justify-center text-white text-2xl font-light transition-colors">
+            +
+          </div>
+        </motion.div>
+      </Link>
 
       {/* Bottom spacing for nav */}
       <div className="pb-20" />

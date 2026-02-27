@@ -5,83 +5,22 @@ import { useState } from 'react';
 import { motion } from 'framer-motion';
 import Link from 'next/link';
 import { useAccount } from 'wagmi';
+import { useVaults, useUserBalance, useVaultHistory } from '@yo-protocol/react';
 
 import { getAccountById, type AccountId } from '@/lib/accounts';
 import { EarningsChart } from '@/components/EarningsChart';
 import { formatBalance, formatPercentage, formatDateRelative } from '@/lib/format';
 
-// Mock hooks
-const useVault = (vaultName: string) => {
-  const mockRates: Record<string, number> = {
+// Helper function to get APY (placeholder until YO SDK provides this)
+const getVaultAPY = (symbol?: string) => {
+  const apyMap: Record<string, number> = {
     yoUSD: 8.5,
-    yoEUR: 7.2, 
+    yoEUR: 7.2,
     yoBTC: 5.8,
     yoETH: 6.5,
     yoGOLD: 4.2,
   };
-  
-  return {
-    data: {
-      apy: mockRates[vaultName] || 0,
-      tvl: 50000000,
-    },
-    isLoading: false,
-  };
-};
-
-const useUserBalance = (vaultName: string, address?: string) => {
-  const mockBalances: Record<string, number> = {
-    yoUSD: 2450.75,
-    yoEUR: 1200.50,
-    yoBTC: 0.05128943,
-    yoETH: 1.25934721,
-    yoGOLD: 2.5687,
-  };
-  
-  return {
-    data: address ? (mockBalances[vaultName] || 0) : 0,
-    isLoading: false,
-  };
-};
-
-const useVaultHistory = (vaultName: string) => {
-  // Generate mock 30-day history
-  const generateHistory = (accountId: AccountId) => {
-    const data = [];
-    const today = new Date();
-    const balance = mockBalances[vaultName] || 0;
-    
-    for (let i = 29; i >= 0; i--) {
-      const date = new Date(today);
-      date.setDate(date.getDate() - i);
-      
-      // Simulate gradual growth
-      const growthFactor = 1 + (29 - i) * 0.003; // 0.3% growth per day
-      const dayBalance = balance / growthFactor;
-      const earnings = balance - dayBalance;
-      
-      data.push({
-        date: date.toISOString(),
-        balance: dayBalance,
-        earnings: earnings,
-      });
-    }
-    
-    return data;
-  };
-  
-  const mockBalances: Record<string, number> = {
-    yoUSD: 2450.75,
-    yoEUR: 1200.50,
-    yoBTC: 0.05128943,
-    yoETH: 1.25934721,
-    yoGOLD: 2.5687,
-  };
-
-  return {
-    data: generateHistory('dollar' as AccountId),
-    isLoading: false,
-  };
+  return symbol ? apyMap[symbol] : 0;
 };
 
 // Mock transaction history
@@ -115,9 +54,10 @@ export default function AccountDetailPage() {
   const { address } = useAccount();
   
   const account = getAccountById(accountId);
-  const { data: vault, isLoading: vaultLoading } = useVault(account.yoVault);
-  const { data: balance, isLoading: balanceLoading } = useUserBalance(account.yoVault, address);
-  const { data: history, isLoading: historyLoading } = useVaultHistory(account.yoVault);
+  const { vaults, isLoading: vaultsLoading } = useVaults();
+  const vault = vaults?.find(v => v.address.toLowerCase() === account.vaultAddress.toLowerCase());
+  const { position, isLoading: balanceLoading } = useUserBalance(account.vaultAddress as `0x${string}`, address);
+  const { yieldHistory, isLoading: historyLoading } = useVaultHistory(account.vaultAddress as `0x${string}`);
 
   if (!account) {
     return (
@@ -127,8 +67,10 @@ export default function AccountDetailPage() {
     );
   }
 
-  const annualRate = vault?.apy || 0;
-  const isLoading = vaultLoading || balanceLoading;
+  // TODO: Get real APY from YO SDK when available
+  const annualRate = getVaultAPY(vault?.symbol) || 0;
+  const balance = Number(position?.assets || BigInt(0));
+  const isLoading = vaultsLoading || balanceLoading;
 
   return (
     <motion.div
@@ -214,7 +156,11 @@ export default function AccountDetailPage() {
         className="p-6 bg-zinc-900/30 rounded-2xl border border-zinc-800/50"
       >
         <EarningsChart
-          data={history || []}
+          data={(yieldHistory || []).map((point: { timestamp: number; value: number }, i: number) => ({
+            date: new Date(point.timestamp * 1000).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+            balance: point.value,
+            earnings: i > 0 ? point.value - (yieldHistory || [])[0].value : 0,
+          }))}
           accountId={accountId}
           isLoading={historyLoading}
         />

@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { motion } from 'framer-motion';
 import type { SavingsAccount } from '@/lib/accounts';
 import { parseAmountInput, formatBalance } from '@/lib/format';
+import { Confetti } from './Confetti';
 
 interface WithdrawFormProps {
   account: SavingsAccount;
@@ -77,6 +78,11 @@ export function WithdrawForm({
         animate={{ opacity: 1, scale: 1 }}
         className="flex flex-col items-center justify-center py-16 space-y-6"
       >
+        <Confetti
+          active={showSuccess}
+          onComplete={() => setShowSuccess(false)}
+        />
+        
         <motion.div
           initial={{ scale: 0 }}
           animate={{ scale: 1 }}

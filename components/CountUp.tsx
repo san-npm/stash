@@ -14,7 +14,7 @@ interface CountUpProps {
 export function CountUp({
   end,
   start = 0,
-  duration = 2000,
+  duration = 1500,
   decimals = 2,
   className,
   children,

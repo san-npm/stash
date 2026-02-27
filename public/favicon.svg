@@ -1,0 +1,10 @@
+<svg width="32" height="32" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+  <!-- Money bag background -->
+  <path d="M16 4C13.5 4 11.5 6 11.5 8.5V10C9.5 10 8 11.5 8 13.5V24C8 26.5 10 28 12.5 28H19.5C22 28 24 26.5 24 24V13.5C24 11.5 22.5 10 20.5 10V8.5C20.5 6 18.5 4 16 4Z" fill="#10B981"/>
+  
+  <!-- Money bag string -->
+  <rect x="14" y="8" width="4" height="4" rx="2" fill="#059669"/>
+  
+  <!-- Dollar sign -->
+  <text x="16" y="22" font-family="Arial, sans-serif" font-size="12" font-weight="bold" text-anchor="middle" fill="white">$</text>
+</svg>

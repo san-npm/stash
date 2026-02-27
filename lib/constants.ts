@@ -1,14 +1,16 @@
+import { VAULTS } from '@yo-protocol/core';
+
 // Chain and protocol constants
 export const CHAIN_ID = 8453; // Base chain - cheapest gas
 export const CHAIN_NAME = 'Base';
 
-// YO Protocol vault addresses (these would be real addresses in production)
+// YO Protocol vault addresses from @yo-protocol/core
 export const YO_VAULT_ADDRESSES = {
-  yoUSD: '0x1234567890123456789012345678901234567890' as const,
-  yoEUR: '0x2234567890123456789012345678901234567890' as const,
-  yoBTC: '0x3234567890123456789012345678901234567890' as const,
-  yoETH: '0x4234567890123456789012345678901234567890' as const,
-  yoGOLD: '0x5234567890123456789012345678901234567890' as const,
+  yoUSD: VAULTS.yoUSD.address,
+  yoEUR: VAULTS.yoEUR.address,
+  yoBTC: VAULTS.yoBTC.address,
+  yoETH: VAULTS.yoETH.address,
+  yoGOLD: VAULTS.yoGOLD.address,
 } as const;
 
 // Underlying token addresses
